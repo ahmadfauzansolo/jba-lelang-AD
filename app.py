@@ -17,8 +17,8 @@ if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
 # =========================================
 # SCRAPING JBA + PAGINATION SAMPAI HABIS
 # =========================================
-def get_ad_lots():
-    ad_lots = []
+def get_all_lots():
+    all_lots = []
     page = 1
     while True:
         url = f"{BASE_URL}&page={page}"
@@ -30,37 +30,35 @@ def get_ad_lots():
             print(f"[INFO] Tidak ada lot di halaman {page}, berhenti. Ini halaman terakhir.")
             break
 
-        found_ad = 0
         for lot in lots:
+            lot_id = lot.get("data-id") or lot.get("id") or str(page)
+            title_tag = lot.find("h4")
+            title = title_tag.text.strip() if title_tag else "(tanpa judul)"
+            location_tag = lot.find("span", class_="location")
+            location = location_tag.text.strip() if location_tag else "(tidak diketahui)"
             plate_tag = lot.find("span", class_="plate-number")
-            if plate_tag and plate_tag.text.strip().startswith("AD"):
-                lot_id = lot.get("data-id") or lot.get("id") or plate_tag.text.strip()
-                title_tag = lot.find("h4")
-                title = title_tag.text.strip() if title_tag else "(tanpa judul)"
-                location_tag = lot.find("span", class_="location")
-                location = location_tag.text.strip() if location_tag else "(tidak diketahui)"
-                link_tag = lot.find("a", href=True)
-                link = f"https://www.jba.co.id{link_tag['href']}" if link_tag else "#"
-                img_tag = lot.find("img", src=True)
-                img_url = img_tag['src'] if img_tag else None
-                if img_url and not img_url.startswith("http"):
-                    img_url = f"https://www.jba.co.id{img_url}"
+            plate = plate_tag.text.strip() if plate_tag else "-"
+            link_tag = lot.find("a", href=True)
+            link = f"https://www.jba.co.id{link_tag['href']}" if link_tag else "#"
+            img_tag = lot.find("img", src=True)
+            img_url = img_tag['src'] if img_tag else None
+            if img_url and not img_url.startswith("http"):
+                img_url = f"https://www.jba.co.id{img_url}"
 
-                ad_lots.append({
-                    "id": lot_id,
-                    "title": title,
-                    "location": location,
-                    "plate": plate_tag.text.strip(),
-                    "link": link,
-                    "photo": img_url
-                })
-                found_ad += 1
+            all_lots.append({
+                "id": lot_id,
+                "title": title,
+                "location": location,
+                "plate": plate,
+                "link": link,
+                "photo": img_url
+            })
 
-        print(f"[INFO] Halaman {page}: Ditemukan {found_ad} lot plat AD")
+        print(f"[INFO] Halaman {page}: Ditemukan {len(lots)} lot")
         page += 1
 
-    print(f"[INFO] Total lot plat AD ditemukan: {len(ad_lots)}")
-    return ad_lots
+    print(f"[INFO] Total lot ditemukan: {len(all_lots)}")
+    return all_lots
 
 # =========================================
 # TELEGRAM
@@ -94,7 +92,7 @@ def send_message(lot):
 # =========================================
 def main():
     print(f"[{datetime.now()}] Bot mulai jalan...")
-    lots = get_ad_lots()
+    lots = get_all_lots()
     for lot in lots:
         send_message(lot)
     print(f"[{datetime.now()}] Bot selesai.")
