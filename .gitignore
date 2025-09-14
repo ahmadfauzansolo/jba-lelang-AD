@@ -6,10 +6,10 @@ __pycache__/
 # Environment variables
 .env
 
-# Data files
+# Data file
 seen_api.json
 
-# Logs (jika ada)
+# Logs
 *.log
 
 # OS files
