@@ -9,32 +9,38 @@ from datetime import datetime
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-JBA_URL = "https://www.jba.co.id/id/lelang-motor/search?vehicle_type=bike&keyword="
+BASE_URL = "https://www.jba.co.id/id/lelang-motor/search?vehicle_type=bike&keyword="
 
 if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
     raise Exception("Set TELEGRAM_TOKEN dan TELEGRAM_CHAT_ID di environment variables!")
 
 # =========================================
-# SCRAPING JBA
+# SCRAPING JBA + PAGINATION SAMPAI HABIS
 # =========================================
 def get_ad_lots():
-    try:
-        r = requests.get(JBA_URL, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
+    ad_lots = []
+    page = 1
+    while True:
+        url = f"{BASE_URL}&page={page}"
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
         soup = BeautifulSoup(r.text, "html.parser")
         lots = soup.find_all("div", class_="vehicle-item")
 
-        ad_lots = []
+        if not lots:
+            print(f"[INFO] Tidak ada lot di halaman {page}, berhenti. Ini halaman terakhir.")
+            break
+
+        found_ad = 0
         for lot in lots:
-            plate = lot.find("span", class_="plate-number")
-            if plate and plate.text.strip().startswith("AD"):
-                lot_id = lot.get("data-id") or lot.get("id") or plate.text.strip()
-                title = lot.find("h4").text.strip()
+            plate_tag = lot.find("span", class_="plate-number")
+            if plate_tag and plate_tag.text.strip().startswith("AD"):
+                lot_id = lot.get("data-id") or lot.get("id") or plate_tag.text.strip()
+                title_tag = lot.find("h4")
+                title = title_tag.text.strip() if title_tag else "(tanpa judul)"
                 location_tag = lot.find("span", class_="location")
                 location = location_tag.text.strip() if location_tag else "(tidak diketahui)"
                 link_tag = lot.find("a", href=True)
                 link = f"https://www.jba.co.id{link_tag['href']}" if link_tag else "#"
-
-                # Ambil foto pertama (jika ada)
                 img_tag = lot.find("img", src=True)
                 img_url = img_tag['src'] if img_tag else None
                 if img_url and not img_url.startswith("http"):
@@ -44,15 +50,17 @@ def get_ad_lots():
                     "id": lot_id,
                     "title": title,
                     "location": location,
-                    "plate": plate.text.strip(),
+                    "plate": plate_tag.text.strip(),
                     "link": link,
                     "photo": img_url
                 })
-        print(f"[INFO] Ditemukan {len(ad_lots)} lot plat AD")
-        return ad_lots
-    except Exception as e:
-        print(f"[ERROR] Gagal ambil data dari JBA: {e}")
-        return []
+                found_ad += 1
+
+        print(f"[INFO] Halaman {page}: Ditemukan {found_ad} lot plat AD")
+        page += 1
+
+    print(f"[INFO] Total lot plat AD ditemukan: {len(ad_lots)}")
+    return ad_lots
 
 # =========================================
 # TELEGRAM
