@@ -47,7 +47,8 @@ def send_message(lot):
             if img.status_code == 200:
                 files = {"photo": ("img.jpg", img.content)}
                 data = {"chat_id": TELEGRAM_CHAT_ID, "caption": caption, "parse_mode": "HTML"}
-                res = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto", data=data, files=files)
+                res = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendPhoto",
+                                    data=data, files=files)
                 print(f"[INFO] Lot terkirim (foto) status {res.status_code}")
                 return
         except Exception as e:
@@ -67,11 +68,18 @@ def get_lots_from_page(page):
     driver.get(url)
 
     try:
-        lots = WebDriverWait(driver, 10).until(
+        lots = WebDriverWait(driver, 15).until(
             EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.vehicle-item, div.auction-item"))
         )
-    except:
-        print("[WARNING] Tidak menemukan lot di halaman ini")
+    except Exception as e:
+        print(f"[WARNING] Tidak menemukan lot di halaman {page} ({e})")
+
+        # simpan HTML buat debug
+        debug_file = f"debug_page_{page}.html"
+        with open(debug_file, "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        print(f"[DEBUG] Source halaman disimpan ke {debug_file}")
+
         return []
 
     page_lots = []
