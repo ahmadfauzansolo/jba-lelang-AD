@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os
-import time
 import requests
 from dotenv import load_dotenv
 from datetime import datetime
@@ -74,11 +73,12 @@ def get_lots_from_page(page):
     except Exception as e:
         print(f"[WARNING] Tidak menemukan lot di halaman {page} ({e})")
 
-        # simpan HTML buat debug
-        debug_file = f"debug_page_{page}.html"
-        with open(debug_file, "w", encoding="utf-8") as f:
-            f.write(driver.page_source)
-        print(f"[DEBUG] Source halaman disimpan ke {debug_file}")
+        # ambil HTML untuk debug
+        source = driver.page_source
+        preview = source[:2000]  # ambil 2000 karakter pertama
+        print("========== DEBUG PAGE SOURCE (awal) ==========")
+        print(preview)
+        print("=========== (potongan, bukan full) ===========")
 
         return []
 
